@@ -1,10 +1,10 @@
-use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Result};
+use std::io::{BufRead, BufReader};
 use std::path::PathBuf;
 use std::process::Command;
 
+use anyhow::{anyhow, Context, Result};
 use lazy_static::lazy_static;
 use regex::Regex;
 use walkdir::WalkDir;
@@ -13,6 +13,7 @@ lazy_static! {
     static ref NAME_RE: Regex = Regex::new("displayname = \"(.*)\"").unwrap();
 }
 
+/// Actions available to run for VMs with `vmrun` CLI
 #[derive(Copy, Clone, Debug)]
 pub enum Action {
     Start,
@@ -31,6 +32,7 @@ impl fmt::Display for Action {
     }
 }
 
+/// Representation of a VM with gathered info from `vmrun` and the `.vmx` file
 #[derive(Debug)]
 pub struct Vm {
     pub name: String,
@@ -39,15 +41,17 @@ pub struct Vm {
 }
 
 impl Vm {
+    /// Gather VM info from the `.vmx` file
     pub fn from_vmx(vmx: PathBuf) -> Result<Self> {
         let name = Self::extract_vmx_name(&vmx)?;
-        return Ok(Self {
+        Ok(Self {
             name,
             vmx,
             is_running: false,
-        });
+        })
     }
 
+    /// Extract the VM Display Name from the `.vmx` file
     fn extract_vmx_name(vmx: &PathBuf) -> Result<String> {
         let input = File::open(vmx)?;
         let buffered = BufReader::new(input);
@@ -61,17 +65,20 @@ impl Vm {
         }
         Ok("Unknown".to_string())
     }
+
+    /// Run an action using `vmrun`
+    pub fn manage(&self, action: Action) -> Result<()> {
+        Command::new("vmrun")
+            .arg(&action.to_string())
+            .arg(&self.vmx.to_str().unwrap())
+            .output()
+            .context("Running vmrun")?;
+        eprintln!("{}ed {}", action, self.name);
+        Ok(())
+    }
 }
 
-pub fn manage_vm(vm: &Vm, action: Action) -> Result<()> {
-    Command::new("vmrun")
-        .arg(&action.to_string())
-        .arg(&vm.vmx.to_str().unwrap())
-        .output()?;
-    eprintln!("{}ed {}", action, vm.name);
-    Ok(())
-}
-
+/// Walk the given path, searching for `.vmx` files
 pub fn get_vms(path: &str) -> Result<Vec<Vm>> {
     let running_vms = get_running_vms()?;
 
@@ -93,19 +100,18 @@ pub fn get_vms(path: &str) -> Result<Vec<Vm>> {
             vm.is_running = true;
         }
     }
-
     Ok(vms)
 }
 
-pub fn get_vm(path: &str, name: &str) -> Option<Vm> {
-    let mut vms: HashMap<String, Vm> = get_vms(path)
-        .unwrap()
+/// Search for a given VM by name
+pub fn get_vm(path: &str, name: &str) -> Result<Vm> {
+    get_vms(path)?
         .into_iter()
-        .map(|vm| (String::from(&vm.name).to_lowercase(), vm))
-        .collect();
-    vms.remove(&name.to_lowercase())
+        .find(|vm| String::from(&vm.name).to_lowercase() == vm.name.to_lowercase())
+        .ok_or(anyhow!("No VM found matching '{}'", name))
 }
 
+/// Gather list of running VMs (by .vmx path) from `vmrun`
 pub fn get_running_vms() -> Result<Vec<String>> {
     let output = Command::new("vmrun").arg("list").output()?;
     Ok(String::from_utf8(output.stdout)

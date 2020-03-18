@@ -1,66 +1,65 @@
+/// VMWare Fusion VM Helper for MacOS
+///
+/// Provides a quick way to view and manage VMs
+/// by discovering `vmx` files in Documents
+use anyhow::Result;
+use shellexpand::tilde;
 use structopt::StructOpt;
 
-use vms::{get_vm, get_vms, manage_vm, Action};
+use vms::{get_vm, get_vms, Action};
 
-const VM_PATH: &str = "/Users/matwood/Documents/Virtual Machines.localized/";
+const VM_PATH: &str = "~/Documents/Virtual Machines.localized/";
 
 #[derive(StructOpt, Debug)]
 #[structopt(name = "vms", rename_all = "kebab-case")]
-/// VM Manager
+/// VMWare Fusion Manager
 struct Args {
     #[structopt(subcommand)]
     cmd: Command,
+    /// Path the Virtual Machines folder
+    #[structopt(default_value = VM_PATH, set = structopt::clap::ArgSettings::Global)]
+    vm_path: String,
 }
 
 #[derive(StructOpt, Debug)]
-enum Command {
-    List,
-    Start {
-        // VM name
-        name: String,
-    },
-    Stop {
-        // VM name
-        name: String,
-    },
-    Suspend {
-        // VM name
-        name: String,
-    },
+#[structopt(rename_all = "kebab-case")]
+struct VmOptions {
+    // VM name
+    name: String,
 }
 
-fn main() -> Result<(), std::io::Error> {
+#[derive(StructOpt, Debug)]
+#[structopt(rename_all = "kebab-case")]
+enum Command {
+    /// Show available VMs (* depicts an active VM)
+    List,
+    /// Start a VM by name
+    Start(VmOptions),
+    /// Stop a VM by name
+    Stop(VmOptions),
+    /// Suspend a VM by name
+    Suspend(VmOptions),
+}
+
+fn main() -> Result<()> {
     let args = Args::from_args();
 
     match args.cmd {
         Command::List => {
-            for vm in get_vms(VM_PATH)? {
+            for vm in get_vms(&tilde(&args.vm_path))? {
                 let symbol = if vm.is_running { "*" } else { "" };
                 println!("{}{}", vm.name, symbol);
             }
         }
-        Command::Start { name } => {
-            if let Some(vm) = get_vm(VM_PATH, &name) {
-                manage_vm(&vm, Action::Start);
-            } else {
-                eprintln!("No VM found for '{}'", name);
-            }
+        Command::Start(opts) => {
+            get_vm(&tilde(&args.vm_path), &opts.name)?.manage(Action::Start)?;
         }
-        Command::Stop { name } => {
-            if let Some(vm) = get_vm(VM_PATH, &name) {
-                manage_vm(&vm, Action::Stop);
-            } else {
-                eprintln!("No VM found for '{}'", name);
-            }
+        Command::Stop(opts) => {
+            get_vm(&tilde(&args.vm_path), &opts.name)?.manage(Action::Stop)?;
         }
-        Command::Suspend { name } => {
-            if let Some(vm) = get_vm(VM_PATH, &name) {
-                manage_vm(&vm, Action::Suspend);
-            } else {
-                eprintln!("No VM found for '{}'", name);
-            }
+        Command::Suspend(opts) => {
+            get_vm(&tilde(&args.vm_path), &opts.name)?.manage(Action::Suspend)?;
         }
     };
-
     Ok(())
 }
