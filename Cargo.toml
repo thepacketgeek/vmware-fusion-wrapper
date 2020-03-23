@@ -1,9 +1,18 @@
 [package]
 name = "vms"
 description = "VMWare Fusion Wrapper CLI"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Mat Wood <mat@thepacketgeek.com>"]
 edition = "2018"
+license = "MIT"
+homepage = "https://github.com/thepacketgeek/vmware-fusion-wrapper"
+documentation = "https://github.com/thepacketgeek/vmware-fusion-wrapper"
+readme = "README.md"
+
+
+[[bin]]
+name = "vms"
+bench = false
 
 
 [dependencies]

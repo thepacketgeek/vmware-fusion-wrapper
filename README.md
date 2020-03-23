@@ -2,8 +2,11 @@
 
 [![Actions Status](https://github.com/thepacketgeek/vmware-fusion-wrapper/workflows/Cargo/badge.svg)](https://github.com/thepacketgeek/vmware-fusion-wrapper/actions)
 
+## Installation
+`$ cargo install vms`
+
 ```
-vms 0.1.0
+vms 0.1.1
 VMWare Fusion Manager
 
 USAGE:
@@ -35,7 +38,7 @@ Ubuntu19.10
 XRv1*
 ```
 
-# Managing VMs
+## Managing VMs
 You can quickly stop, start, or suspend VMs by display name, no need to know the `.vmx` path
 
 ```
