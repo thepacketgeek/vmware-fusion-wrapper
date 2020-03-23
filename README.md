@@ -1,5 +1,7 @@
 ## VMWare Fusion Wrapper for MacOS
 
+[![Actions Status](https://github.com/thepacketgeek/vmware-fusion-wrapper/workflows/cargo/badge.svg)](https://github.com/thepacketgeek/vmware-fusion-wrapper/actions)
+
 ```
 vms 0.1.0
 VMWare Fusion Manager
