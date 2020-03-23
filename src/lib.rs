@@ -6,6 +6,7 @@ use std::process::Command;
 
 use anyhow::{anyhow, Context, Result};
 use lazy_static::lazy_static;
+use log::{debug, info};
 use regex::Regex;
 use walkdir::WalkDir;
 
@@ -44,6 +45,7 @@ impl Vm {
     /// Gather VM info from the `.vmx` file
     pub fn from_vmx(vmx: PathBuf) -> Result<Self> {
         let name = Self::extract_vmx_name(&vmx)?;
+        debug!("Found '{}' at '{:?}'", name, vmx);
         Ok(Self {
             name,
             vmx,
@@ -68,12 +70,17 @@ impl Vm {
 
     /// Run an action using `vmrun`
     pub fn manage(&self, action: Action) -> Result<()> {
+        debug!(
+            "Running 'vmrun {} {}",
+            action.to_string(),
+            self.vmx.to_str().unwrap()
+        );
         Command::new("vmrun")
             .arg(&action.to_string())
             .arg(&self.vmx.to_str().unwrap())
             .output()
             .context("Running vmrun")?;
-        eprintln!("{}ed {}", action, self.name);
+        info!("{}ed {}", action, self.name);
         Ok(())
     }
 }
@@ -107,8 +114,8 @@ pub fn get_vms(path: &str) -> Result<Vec<Vm>> {
 pub fn get_vm(path: &str, name: &str) -> Result<Vm> {
     get_vms(path)?
         .into_iter()
-        .find(|vm| String::from(&vm.name).to_lowercase() == vm.name.to_lowercase())
-        .ok_or(anyhow!("No VM found matching '{}'", name))
+        .find(|vm| String::from(&vm.name).to_lowercase() == name.to_lowercase())
+        .ok_or_else(|| anyhow!("No VM found matching '{}'", name))
 }
 
 /// Gather list of running VMs (by .vmx path) from `vmrun`

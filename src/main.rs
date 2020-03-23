@@ -3,6 +3,8 @@
 /// Provides a quick way to view and manage VMs
 /// by discovering `vmx` files in Documents
 use anyhow::Result;
+use env_logger;
+use log::{debug, LevelFilter};
 use shellexpand::tilde;
 use structopt::StructOpt;
 
@@ -19,6 +21,9 @@ struct Args {
     /// Path the Virtual Machines folder
     #[structopt(default_value = VM_PATH, set = structopt::clap::ArgSettings::Global)]
     vm_path: String,
+    /// Show debug logs
+    #[structopt(long, short, set = structopt::clap::ArgSettings::Global)]
+    debug: bool,
 }
 
 #[derive(StructOpt, Debug)]
@@ -43,6 +48,13 @@ enum Command {
 
 fn main() -> Result<()> {
     let args = Args::from_args();
+    let level = if args.debug {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Info
+    };
+    env_logger::Builder::new().filter(None, level).init();
+    debug!("Args: {:?}", args);
 
     match args.cmd {
         Command::List => {
